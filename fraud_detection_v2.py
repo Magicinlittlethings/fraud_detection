@@ -260,6 +260,12 @@ def train_anomaly_detector(df, model, scaler):
     iso    = IsolationForest(n_estimators=200, contamination=0.035, random_state=42)
     iso.fit(legit)
     print(f"  Isolation Forest trained on {len(legit):,} legitimate transactions")
+
+    # ADD THESE TWO LINES TO SAVE TO DISK LOCALLY
+    import pickle
+    with open("models/anomaly_iso.pkl", "wb") as f:
+        pickle.dump(iso, f)
+
     return iso
 
 
@@ -975,51 +981,53 @@ def health():
 # ═══════════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════════
-# 9. MAIN (Optimized for Low-Memory Cloud Inference Deployments)
+# 9. MAIN (Zero-Memory Cloud Production Execution)
 # ═══════════════════════════════════════════════════════════════════
 
 def main():
     global DETECTOR
 
     print("\n" + "═"*55)
-    print("  GNN Fraud Detection System — Production Engine")
+    print("  GNN Fraud Detection System — High-Speed Cloud Engine")
     print("═"*55)
 
     import pickle
     
-    # Render cloud environment relies exclusively on pre-compiled model matrices
-    # to protect the 512MB RAM threshold limit from training loop consumption.
-    if os.path.exists("models/fraudnet_best.pt") and os.path.exists("models/scaler.pkl"):
-        print("[1/2] Loading production-ready model checkpoints from disk...")
+    # Render cloud environment loads completely pre-compiled assets
+    # to protect the 512MB RAM free threshold constraint.
+    if (os.path.exists("models/fraudnet_best.pt") and 
+        os.path.exists("models/scaler.pkl") and 
+        os.path.exists("models/anomaly_iso.pkl")):
+        
+        print("[1/2] Loading production-ready neural network checkpoints...")
         model = FraudNet(input_dim=len(FEATURE_COLS))
         model.load_state_dict(torch.load("models/fraudnet_best.pt", map_location="cpu"))
-        model.eval() # Freeze layers instantly to eliminate gradient RAM allocations
+        model.eval() # Freeze computational layers to kill auxiliary gradient RAM allocations
         
+        print("[2/2] Loading pre-compiled scaler and anomaly detection layers...")
         with open("models/scaler.pkl", "rb") as f:
             scaler = pickle.load(f)
+        with open("models/anomaly_iso.pkl", "rb") as f:
+            iso = pickle.load(f)
+            
     else:
-        print("[!] Local models not found. Executing emergency container fallback training...")
+        print("[!] Local models incomplete. Executing emergency cloud fallback training...")
         df = generate_training_data()
         model, scaler = train_model(df)
+        iso = train_anomaly_detector(df, model, scaler)
         with open("models/scaler.pkl", "wb") as f:
             pickle.dump(scaler, f)
 
-    print("[2/2] Initializing production isolation anomaly boundaries...")
-    # Re-instantiate a lightweight reference frame for isolation mapping
-    df_ref = generate_training_data()
-    iso = train_anomaly_detector(df_ref, model, scaler)
-
     DETECTOR = FraudDetector(model, scaler, iso)
 
-    # DYNAMIC PORT BINDING: Read the injected port from the hosting router
-    # If no environment variable is present, fallback gracefully to 5050
+    # Read the dynamic runtime network port injected by Render
     port = int(os.environ.get("PORT", 5050))
     
     print("\n" + "═"*55)
-    print("  ✓ Cloud Infrastructure Active")
+    print("  ✓ Cloud Infrastructure Listening Successfully")
     print("═"*55 + "\n")
 
-    # Bind explicitly to 0.0.0.0 to clear the network scanning blockage
+    # Bind explicitly to 0.0.0.0 to fix the port scanning loop block
     app.run(host="0.0.0.0", port=port, debug=False)
 
 
