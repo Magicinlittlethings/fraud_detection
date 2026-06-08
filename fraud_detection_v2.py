@@ -974,42 +974,52 @@ def health():
 # 9. MAIN
 # ═══════════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════════
+# 9. MAIN (Optimized for Low-Memory Cloud Inference Deployments)
+# ═══════════════════════════════════════════════════════════════════
+
 def main():
     global DETECTOR
 
     print("\n" + "═"*55)
-    print("  GNN Fraud Detection System")
-    print("  FITC Q1 2025 · Nigerian Banking · Chapter 4")
+    print("  GNN Fraud Detection System — Production Engine")
     print("═"*55)
 
-    print("\n[1/3] Generating training data from FITC Q1 2025 …")
-    df = generate_training_data()
-
-    print("\n[2/3] Training FraudNet model …")
+    import pickle
+    
+    # Render cloud environment relies exclusively on pre-compiled model matrices
+    # to protect the 512MB RAM threshold limit from training loop consumption.
     if os.path.exists("models/fraudnet_best.pt") and os.path.exists("models/scaler.pkl"):
-        import pickle
-        model  = FraudNet(input_dim=len(FEATURE_COLS))
+        print("[1/2] Loading production-ready model checkpoints from disk...")
+        model = FraudNet(input_dim=len(FEATURE_COLS))
         model.load_state_dict(torch.load("models/fraudnet_best.pt", map_location="cpu"))
+        model.eval() # Freeze layers instantly to eliminate gradient RAM allocations
+        
         with open("models/scaler.pkl", "rb") as f:
             scaler = pickle.load(f)
-        print("  Loaded saved model checkpoint.")
     else:
-        import pickle
+        print("[!] Local models not found. Executing emergency container fallback training...")
+        df = generate_training_data()
         model, scaler = train_model(df)
         with open("models/scaler.pkl", "wb") as f:
             pickle.dump(scaler, f)
 
-    print("\n[3/3] Training anomaly detector …")
-    iso = train_anomaly_detector(df, model, scaler)
+    print("[2/2] Initializing production isolation anomaly boundaries...")
+    # Re-instantiate a lightweight reference frame for isolation mapping
+    df_ref = generate_training_data()
+    iso = train_anomaly_detector(df_ref, model, scaler)
 
     DETECTOR = FraudDetector(model, scaler, iso)
 
+    # DYNAMIC PORT BINDING: Read the injected port from the hosting router
+    # If no environment variable is present, fallback gracefully to 5050
     port = int(os.environ.get("PORT", 5050))
+    
     print("\n" + "═"*55)
-    print("  ✓ System ready")
-    print(f"  Open: http://localhost:{port}")
+    print("  ✓ Cloud Infrastructure Active")
     print("═"*55 + "\n")
 
+    # Bind explicitly to 0.0.0.0 to clear the network scanning blockage
     app.run(host="0.0.0.0", port=port, debug=False)
 
 
