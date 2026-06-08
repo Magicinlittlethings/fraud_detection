@@ -1,4 +1,4 @@
-torch==2.1.0 --find-links https://download.pytorch.org/whl/cpu
+torch
 numpy
 pandas
 scikit-learn
